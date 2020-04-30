@@ -265,10 +265,19 @@ Don't create tasks in `aio.CancelledError` exception handler.
 [ex: asyncio life cycle with pending task](08_asyncio_lifecycle_pending.py)
 
 ### `return_exceptions=True` in `aio.gather()`
+1. `run_until_complete()` -> `fut` -> `gather()`
+2. If `fut` -> exception `run_until_complete()` -> exception -> stop loop
+3. If `run_until_complete()` is in `gather()` group future -> exception
+4. -> stop loop before other tasks are done
+5. which is bad! We want `run_until_complete(group)` to finish only when all tasks have finished, even if some raise exceptions.
+6. thus `gather(*tasks, return_exceptions=True)` is a group future feater to treat exceptions as **return values**.
 
+[ex: return_exceptions](09_return_exceptions.py)
 
-
-### **??? Exception handling**
+### Shell Signals
+- SIGINT == `KeyboardInterrupt` == Ctrl+C
+- SIGTERM == `kill <pid>`
+- KILL == `kill -9 <pid>` = `kill -s KILL <pid>`
 
 ### Alternatives
 `Curio` and `Trio` built on top of coroutines.
