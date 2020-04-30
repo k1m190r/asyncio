@@ -336,6 +336,82 @@ Only use `*.create_task()`.
 
 ## 6. `asyncio.Queue`
 
+The Q.
+```python
+import asyncio as aio
+
+def startQ(Q: aio.Queue, corofn):
+    """
+    Non blocking Start drain loop on Q.
+
+    Deque value from Q and schedule corofn(Q, value) on it.
+
+    corofn(Q, value) can Q.put(new_value) to feed the Q.
+    corofn(Q, value) must run Q.task_done() at the end.
+		Use try: ... finally: ...
+
+    Calling code can await Q for all task_done():
+		await Q.join()
+
+    Send EOFError to stop Q loop.
+    Calling code must ensure that Q is fully drained
+	and all tasks complete.
+    """
+
+    async def drain():
+        while True:
+
+            # deque the value
+            x = await Q.get()
+
+            # stop Q on EOFError signal
+            if x == EOFError:
+                Q.task_done() # EOF done
+                break
+
+            create_task(corofn(Q, x))
+
+    create_task(drain())
+
+```
+
+Usage example:
+```python
+import asyncio as aio
+
+# create Q
+urlQ = aio.Queue()
+
+# feed in first value
+urlQ.put_nowait(startURL)
+
+async def proc_url(Q, url):
+    try:
+		"""
+		do some work here with url
+		perhaps feed new urls into Q
+		BIG ASSUMPTION here this is a finite process
+		URLs will run out at some point...
+		ASSUMPTION 2 GET URL requests are throttled
+		by aiohttp so we not hitting any limits
+		"""
+
+    finally:
+		# mark this task as done
+        Q.task_done()
+
+
+# RUN
+startQ(urlQ, proc_url)
+
+# One all tasks complete
+await urlQ.join()
+# send in stop the loop EOFError
+urlQ.put_nowait(EOFError)
+
+```
+
+
 ## 7..9. Network IO
 
 ## 
